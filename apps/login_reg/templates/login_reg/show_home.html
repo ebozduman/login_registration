@@ -4,8 +4,50 @@
         <meta charset="utf-8">
         <title>Login & Reg | Success</title>
     </head>
+    <style>
+        #contribute{
+            width: 300px;
+            height: 300px;
+            margin-left: 600px;
+        }
+        #contr_quote input{
+            display: block;
+        }
+        #quote_textarea{
+            width: 150px;
+            height: 70px;
+        }
+        #contr_quote{
+
+        }
+    </style>
     <body>
-        <h2>Success! Welcome {{user.first_name}}</h2>
+        <h2>Success! Welcome, {{user.first_name}}</h2>
+        <p>Quotable Quotes</p>
+        <div id="quotable_quotes">
+            {% for quote in quotes %}
+            <p>{{quote.quoted_by}}{{quote.id}}: {{quote.quote_text}}</p>
+            <p>Posted by <a href="/poster_favorites">{{quote.posted_by}}</a></p>
+            {% csrf_token %}
+            <a href="/add_to_my_favorites/{{quote.id}}"><button>Add to My List</button></a>
+            {% endfor%}
+        </div>
+        <div id="your_favorites">
+            {% for favorite in favorites_list %}
+            <p>{{favorite.quote_id.quoted_by}}: {{favorite.quote_id.quote_text}}</p>
+            {% csrf_token %}
+            <p>Posted by <a href="/poster_favorites">{{favorite.quote_id.posted_by}}</a></p>
+            {% endfor%}
+        </div>
+        <div id="contribute">
+            <p>Contribute a Quote:</p>
+            <form id="contr_quote" action="/add_quote/" method="post">
+                {% csrf_token %}
+                Quoted By: <input type="text" name="quoted_by">
+                Message: <input id="quote_textarea" type="textarea" name="quote_textarea">
+                <input type="submit" name="submit">
+            </form>
+        </div>
         <!-- <p>Successfully {{login_state}}!</p> -->
         <a href="/logout"><button>Log Out</button></a>
     </body>
