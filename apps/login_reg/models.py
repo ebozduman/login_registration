@@ -2,75 +2,6 @@ from __future__ import unicode_literals
 from django.db import models
 import bcrypt, re
 
-class QuoteManager(models.Manager):
-    def add(self, postData):
-        print "Entering Quote add"
-        error_list = []
-        back_to_register_page = False
-        quote = postData['quote'].lower().strip()
-        quoted_by = postData['quoted_by'].lower().strip()
-        quote_list = Quote.objects.filter(quote_text=quote)
-        user_name = User.objects.get(id=postData['user_id']).first_name
-        if quote_list:
-            error_list.append('This quote message already exists!')
-            back_to_register_page = True
-        elif len(quote) < 10:
-            error_list.append('Quote message cannot be less than 10 chars!')
-            back_to_register_page = True
-            if len(quoted_by) < 3:
-                error_list.append("Quoted By' cannot be less than 3 chars!")
-                back_to_register_page = True
-
-        if back_to_register_page:
-            ret_data = {
-                'success': False,
-                'msg_list': error_list
-            }
-        else:
-            # All validations passed. Data can be added into DB
-            print "Creating quote object "
-            Quote.objects.create(quote_text=quote, quoted_by=user_name)
-            ret_data = {
-                'success': True,
-                'msg_list': []
-            }
-        return ret_data
-
-class Quote(models.Model):
-    quote_text = models.CharField(max_length=300)
-    posted_by = models.CharField(max_length=45)
-    quoted_by = models.CharField(max_length=45)
-    objects = QuoteManager()
-
-class FavoriteManager(models.Manager):
-    def add_fav(self, postData):
-        print "Entering Favorite add"
-        error_list = []
-        back_to_register_page = False
-        user_id = postData['user_id']
-        print user_id
-        quote = Quote.objects.get(id=postData['quote_id'])
-        user = User.objects.get(id=user_id)
-        favorites_list = user.favorites.all()
-        if quote in favorites_list:
-            ret_data = {
-                'success': False,
-                'msg_list': list("This quote is already in your Favorites list!")
-            }
-        else:
-            print "Adding favorite object "
-            new_fav = Favorite.objects.create(quote_id=quote)
-            user.favorites.add(new_fav)
-            # Favorite.objects.add(quote_id=postData['quote_id'])
-            ret_data = {
-                'success': True,
-                'msg_list': []
-            }
-
-class Favorite(models.Model):
-    quote_id = models.ForeignKey(Quote)
-    objects = FavoriteManager()
-
 class UserManager(models.Manager):
     def login(self, postData):
         def is_valid_email(email):
@@ -164,7 +95,7 @@ class UserManager(models.Manager):
         error_list = []
         back_to_register_page = False
         first_name = postData['first_name'].lower().strip()
-        last_name = postData['last_name'].lower().strip()
+        alias = postData['alias'].lower().strip()
         email = postData['email'].lower().strip()
         password = postData['password'].strip()
         conf_pwd = postData['conf_pwd'].strip()
@@ -172,8 +103,8 @@ class UserManager(models.Manager):
         if not is_valid_name(first_name, 'First'):
             back_to_register_page = True
 
-        #Validate last_name
-        if not is_valid_name(last_name, 'Last'):
+        #Validate alias
+        if not is_valid_name(alias, 'Alias'):
             back_to_register_page = True
 
         # Check if user is already registered (email is in DB)
@@ -198,7 +129,7 @@ class UserManager(models.Manager):
             pw_hash = bcrypt.hashpw(password.encode(), bcrypt.gensalt())
             user = User.objects.create(
                 first_name=first_name,
-                last_name=last_name,
+                alias=alias,
                 email=email,
                 password=pw_hash
             )
@@ -208,12 +139,76 @@ class UserManager(models.Manager):
             }
         return ret_data
 
+class QuoteManager(models.Manager):
+    def add_quote(self, postData):
+        print "Entering Quote add"
+        error_list = []
+        back_to_home_page = False
+        quote_text = postData['quote_text'].lower().strip()
+        quoted_by = postData['quoted_by']
+        user_id = postData['user_id']
+        quote_list = Quote.objects.filter(quote_text=quote_text)
+        user = User.objects.get(id=postData['user_id'])
+
+        if quote_list:
+            error_list.append('This quote message already exists!')
+            back_to_home_page = True
+        else:
+            if len(quote_text) < 10:
+                error_list.append('Quote message cannot be less than 10 chars!')
+                back_to_home_page = True
+            if len(quoted_by) < 3:
+                error_list.append("'Quoted By' cannot be less than 3 chars!")
+                back_to_home_page = True
+
+        if back_to_home_page:
+            print "quote add failed: ", error_list
+            ret_data = {
+                'success': False,
+                'msg_list': error_list
+            }
+        else:
+            # All validations passed. quote can be added into Quote DB
+            print "Creating quote object "
+            quote = Quote(quote_text=quote_text, poster_id=user_id, poster_alias=user.alias, quoted_by=quoted_by)
+            quote.save()
+            # quote.followers.add(user)
+            print "Saved quote = ", quote
+            ret_data = {
+                'success': True,
+                'msg_list': []
+            }
+        return ret_data
+
+    def add_fav(self, postData):
+        quote = Quote.objects.get(id=postData['quote_id'])
+        user = User.objects.get(id=postData['user_id'])
+        quote.followers.add(user)
+        return user.quote_set.all()
+
+    def remove_from_my_list(self, postData):
+        quote = Quote.objects.get(id=postData['quote_id'])
+        user = User.objects.get(id=postData['user_id'])
+        user.quote_set.remove(quote)
+        return user.quote_set.all()
+    def get_poster_list(self, postData):
+        user = User.objects.get(id=postData['poster_id'])
+        return user.quote_set.all()
+
 class User(models.Model):
     first_name = models.CharField(max_length = 45)
-    last_name = models.CharField(max_length = 45)
+    alias = models.CharField(max_length = 45)
     email = models.CharField(max_length = 255)
     password = models.CharField(max_length = 255)
-    favorites = models.ManyToManyField(Favorite)
     created_at = models.DateTimeField(auto_now_add = True)
     updated_at = models.DateTimeField(auto_now = True)
     objects = UserManager()
+
+
+class Quote(models.Model):
+    quote_text = models.CharField(max_length=300)
+    poster_id = models.CharField(max_length=45)
+    poster_alias = models.CharField(max_length=45)
+    followers = models.ManyToManyField(User)
+    quoted_by = models.CharField(max_length=45)
+    objects = QuoteManager()

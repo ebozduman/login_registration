@@ -2,7 +2,7 @@
 <html>
     <head>
         <meta charset="utf-8">
-        <title>Login & Reg | Home</title>
+        <title>Login/Registration</title>
         {% load staticfiles %}
         <link rel="stylesheet" href="{% static '/login_reg/css/index.css' %}">
     </head>
@@ -11,7 +11,7 @@
         <form action="/register_process" method="POST">
             {% csrf_token %}
             First Name: <input type="text" name="first_name"></br>
-            Last Name: <input type="text" name="last_name"></br>
+            Alias: <input type="text" name="alias"></br>
             Email: <input type="text" name="email"></br>
             Password: <input type="password" name="password"></br>
             Confirm pw: <input type="password" name="conf_pwd"></br>
