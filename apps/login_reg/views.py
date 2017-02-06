@@ -1,15 +1,16 @@
 from django.shortcuts import render, redirect
 from django.contrib import messages
+from datetime import datetime
 from .models import User
-from .models import Quote
+from .models import Appointment
+from pytz import timezone
 
 def index(request):
     return render(request, 'login_reg/index.html')
 
 def register_process(request):
     postData = {
-        'first_name' : request.POST['first_name'],
-        'alias' : request.POST['alias'],
+        'name' : request.POST['name'],
         'email' : request.POST['email'],
         'password' : request.POST['password'],
         'conf_pwd' : request.POST['conf_pwd']
@@ -44,96 +45,90 @@ def show_home(request):
     if 'id' in request.session:
         user_id = request.session['id']
         user = User.objects.get(id=user_id)
-        quotes_list = Quote.objects.all()
-        print "quotes_list", quotes_list
-        fav_quotes_list = user.quote_set.all()
-        print "fav_quotes_list", fav_quotes_list
-        if fav_quotes_list:
-            quotes_to_exclude=[q.quote_text for q in fav_quotes_list]
-            quotes_list = Quote.objects.exclude(quote_text__in=quotes_to_exclude)
-        print "quotes_list after exclude: ", quotes_list
-        for quote in quotes_list:
-            print "quote.id = ", quote.id
-            print "quote.pk = ", quote.pk
-            print "quote.quote_text = ", quote.quote_text
-            if not quote.quoted_by:
-                quote.quoted_by ='Unknown Source'
-            print "quote.quoted_by = ", quote.quoted_by
-            print "quote.poster_id = ", quote.poster_id
-            print "quote.poster_alias = ", quote.poster_alias
+        todays_date = datetime.now(timezone('US/Pacific')).date()
+        time_now = datetime.now(timezone('US/Pacific')).time()
+        todays_appt_list = Appointment.objects.filter(user__id = user_id, date = todays_date)
+        print "todays_date", todays_date
+        appointments_list = Appointment.objects.filter(user__id = user_id, date__gt = todays_date)
+        for i in appointments_list:
+            print i.task, i.date, i.time, i.status
+
         context = {
             'user': user,
-            'quotes_list': quotes_list,
-            'favorites_list': fav_quotes_list
+            'todays_date':todays_date,
+            'todays_appt_list': todays_appt_list,
+            'appointments_list': appointments_list,
         }
         return render(request, 'login_reg/show_home.html', context)
     else:
         print "else"
         return redirect('/')
 
-def add_quote(request):
-    print "Entered add_quote"
-    print "request.session[id]", request.session['id']
-    postData = {
-        'quote_text' : request.POST['quote_textarea'],
-        'quoted_by' : request.POST['quoted_by'],
-        'user_id' : request.session['id']
+def add_appt(request):
+    print "Entered add_appt"
+    print "request.POST['date'] = ", request.POST['date']
+    print "request.POST['time'] = ", request.POST['time']
+    print "request.POST['task'] = ", request.POST['task']
+    postData={
+        'user_id': request.session['id'],
+        'date': request.POST['date'],
+        'time': request.POST['time'],
+        'task': request.POST['task']
     }
-    ret = Quote.objects.add_quote(postData)
-    print ret
+    ret = Appointment.objects.add_appt(postData)
     if not ret['success']:
-        print "Failure of add quote"
         for msg in ret['msg_list']:
             messages.error(request, msg)
     return redirect('/show_home')
 
-def add_show_my_favorites(request):
-    print "Entered add_show_my_favorites"
+def delete_appt(request, appt_id):
+    print "Entered delete_appt"
     postData={
         'user_id': request.session['id'],
-        'quote_id': request.POST['quote_id']
+        'appt_id': appt_id
     }
-    favorites_list = Quote.objects.add_fav(postData)
-    print favorites_list
-    for f in favorites_list:
-        print "f.quoted_by", f.quoted_by
-        print "f.quote_text", f.quote_text
-    context = {
-        'favorites_list': favorites_list,
-        'count': favorites_list.count()
-    }
+    Appointment.objects.delete_appt(postData)
+    print "returned from model"
     return redirect('/show_home')
 
-def remove_from_my_list(request):
-    postData={
-        'user_id': request.session['id'],
-        'quote_id': request.POST['quote_id']
-    }
-    favorites_list = Quote.objects.remove_from_my_list(postData)
-    for f in favorites_list:
-        print "f.quoted_by", f.quoted_by
-        print "f.quote_text", f.quote_text
+def edit_appt(request, appt_id):
+    appt = Appointment.objects.get(id=appt_id)
+    task = appt.task
+    print "appt.task", task
+    status = appt.status
+    print "appt.status", status
+    print "appt.date", appt.date
+    date = appt.date.strftime('%Y-%m-%d')
+    print "reformatted appt.date", date
+    print "appt.time", appt.time
+    time = str(appt.time).split(':')
+    seq = time[0], time[1]
+    time = ':'.join(seq)
+    print "reformatted appt.time", time
     context = {
-        'favorites_list': favorites_list,
+        'appt_id': appt_id,
+        'task': task,
+        'status': status,
+        'date': date,
+        'time': time
     }
-    return redirect('/show_home')
+    return render(request, 'login_reg/edit_appt.html', context)
 
-def show_poster_favorites(request, poster_id):
+def update_appt(request, appt_id):
+    print "request",request
+    new_task = request.POST['task']
+    new_status = request.POST['status']
+    new_date = request.POST['date']
+    new_time = request.POST['time']
     postData={
-        # 'user_id': request.session['id'],
-        'poster_id': poster_id
+        'appt_id': appt_id,
+        'new_task': new_task,
+        'new_status': new_status,
+        'new_date': new_date,
+        'new_time': new_time,
     }
-    poster = User.objects.get(id=poster_id)
-    poster_list = Quote.objects.get_poster_list(postData)
-    for p in poster_list:
-        print "p.quoted_by", p.quoted_by
-        print "p.quote_text", p.quote_text
-    context = {
-        'poster_alias' : poster.alias,
-        'poster_list': poster_list,
-        'count': poster_list.count(),
-    }
-    return render(request, 'login_reg/show_poster_list.html', context)
+    Appointment.objects.update_appt(postData)
+    return redirect('/edit_appt/' + appt_id)
 
 def logout(request):
     print "logout"

@@ -6,9 +6,9 @@ urlpatterns = [
     url(r'^register_process$', views.register_process),
     url(r'^login_process$', views.login_process),
     url(r'^show_home$', views.show_home),
-    url(r'^add_quote$', views.add_quote),
-    url(r'^poster_favorites/(?P<poster_id>\d+)$', views.show_poster_favorites),
-    url(r'^add_to_my_favorites$', views.add_show_my_favorites),
-    url(r'^remove_from_my_list$', views.remove_from_my_list),
+    url(r'^add_appt$', views.add_appt),
+    url(r'^edit_appt/(?P<appt_id>\d+)$', views.edit_appt),
+    url(r'^delete_appt/(?P<appt_id>\d+)$', views.delete_appt),
+    url(r'^update_appt/(?P<appt_id>\d+)$', views.update_appt),
     url(r'^logout$', views.logout),
 ]

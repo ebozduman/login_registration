@@ -5,69 +5,65 @@
         <title>Quotes</title>
     </head>
     <style>
-        #contribute{
-            width: 300px;
-            height: 300px;
-            margin-left: 600px;
+        h2{
+            display: inline-block;
+            padding-right:700px
         }
-        #contr_quote input{
-            display: block;
-        }
-        #quote_textarea{
+        .title{
             width: 150px;
-            height: 70px;
-        }
-        #contr_quote{
-        }
-        .link{
-            font-style: italic;
-        }
-        #quotable_quotes{
-            width: 450px;
             display: inline-block;
         }
-        #your_favorites{
-            width: 450px;
+        .appt{
             display: inline-block;
+            width: 150px;
         }
     </style>
     <body>
-        <h2>Success! Welcome, {{user.first_name}}</h2>
-        <p>Quotable Quotes</p>
-        <div id="quotable_quotes">
-            {% for quote in quotes_list %}
-            <p>{{quote.quoted_by}}: {{quote.quote_text}}</p>
-            <p class="link">Posted by <a href="/poster_favorites/{{quote.poster_id}}">{{quote.poster_alias}}</a></p>
-            <form action="/add_to_my_favorites" method="post">
-                {% csrf_token %}
-                <input type="hidden" name="quote_id" value="{{quote.id}}">
-                <input type="submit" name="my_fav" value="Add to My List">
-            </form>
+        <div>
+            <h2>Welcome, {{user.name}}!</h2>
+            <a href="/logout"><button>Log Out</button></a>
+        </div>
+        <p>Here are your appointments for today: {{todays_date}}:</p>
+        <div>
+            <p class="title"> Tasks</p>
+            <p class="title"> Time</p>
+            <p class="title"> Status</p>
+            <p class="title"> Action</p>
+        </div>
+        <div>
+            {% for appt in todays_appt_list %}
+                <p class="appt"> {{appt.task}}</p>
+                <p class="appt"> {{appt.time}}</p>
+                <p class="appt"> {{appt.status}}</p>
+                <a class="appt" href="edit_appt/{{appt.id}}">Edit</a>
+                <a class="appt" href="delete_appt/{{appt.id}}">Delete</a>
+            </br>
             {% endfor%}
         </div>
-        <div id="your_favorites">
-            <p>Your Favorites</p>
-            {% for f in favorites_list %}
-            <p>{{f.quoted_by}}: {{f.quote_text}}</p>
-            <p class="link">Posted by <a href="/poster_favorites/{{f.poster_id}}">{{f.poster_alias}}</a></p>
-            <form action="/remove_from_my_list" method="post">
-                {% csrf_token %}
-                <input type="hidden" name="quote_id" value="{{f.id}}">
-                <input type="submit" name="my_fav" value="Remove From My List">
-            </form>
+        <p>Your other appointments</p>
+        <div>
+            <p class="title"> Tasks</p>
+            <p class="title"> Date</p>
+            <p class="title"> Time</p>
+        </div>
+        <div>
+            {% for appt in appointments_list %}
+                <p class="appt"> {{appt.task}}</p>
+                <p class="appt"> {{appt.date}}</p>
+                <p class="appt"> {{appt.time}}</p>
+                </br>
             {% endfor%}
         </div>
-        <div id="contribute">
-            <p>Contribute a Quote:</p>
-            <form id="contr_quote" action="/add_quote" method="post">
+        <div id="add_appt">
+            <p>Add Apppointment:</p>
+            <form id="add_appt" action="/add_appt" method="post">
                 {% csrf_token %}
-                Quoted By: <input type="text" name="quoted_by">
-                Message: <input id="quote_textarea" type="textarea" name="quote_textarea">
-                <input type="submit" name="submit">
+                Time: <input type="date" name="date">
+                Date: <input type="time" name="time">
+                Task: <input type="text" name="task">
+                <input type="submit" name="add" value="Add">
             </form>
         </div>
-        <!-- <p>Successfully {{login_state}}!</p> -->
-        <a href="/logout"><button>Log Out</button></a>
         {% if messages %}
         <ul>
             {% for message in messages %}

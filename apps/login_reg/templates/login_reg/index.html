@@ -10,11 +10,12 @@
         <h2>Registration</h2>
         <form action="/register_process" method="POST">
             {% csrf_token %}
-            First Name: <input type="text" name="first_name"></br>
-            Alias: <input type="text" name="alias"></br>
+            Name: <input type="text" name="name"></br>
             Email: <input type="text" name="email"></br>
             Password: <input type="password" name="password"></br>
+            <p>*Password should be at least 8 characters</p>
             Confirm pw: <input type="password" name="conf_pwd"></br>
+            Date Of Birth: <input type="date" name="bday"></br>
             <input type="submit" name="register" value="Register"></br>
         </form>
         <h2>Login</h2>

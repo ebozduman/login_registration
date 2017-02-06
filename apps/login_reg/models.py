@@ -1,6 +1,8 @@
 from __future__ import unicode_literals
 from django.db import models
+from datetime import datetime
 import bcrypt, re
+from pytz import timezone
 
 class UserManager(models.Manager):
     def login(self, postData):
@@ -94,17 +96,12 @@ class UserManager(models.Manager):
         print "Registration process"
         error_list = []
         back_to_register_page = False
-        first_name = postData['first_name'].lower().strip()
-        alias = postData['alias'].lower().strip()
+        name = postData['name'].lower().strip()
         email = postData['email'].lower().strip()
         password = postData['password'].strip()
         conf_pwd = postData['conf_pwd'].strip()
-        #Validate first_name
-        if not is_valid_name(first_name, 'First'):
-            back_to_register_page = True
-
-        #Validate alias
-        if not is_valid_name(alias, 'Alias'):
+        #Validate name
+        if not is_valid_name(name, 'First'):
             back_to_register_page = True
 
         # Check if user is already registered (email is in DB)
@@ -128,87 +125,101 @@ class UserManager(models.Manager):
             # All validations passed. Data can be added into DB
             pw_hash = bcrypt.hashpw(password.encode(), bcrypt.gensalt())
             user = User.objects.create(
-                first_name=first_name,
-                alias=alias,
+                name=name,
                 email=email,
                 password=pw_hash
             )
+            print "Created user"
             ret_data = {
                 'success': True,
                 'msg_list': []
             }
         return ret_data
 
-class QuoteManager(models.Manager):
-    def add_quote(self, postData):
-        print "Entering Quote add"
+class AppointmentManager(models.Manager):
+    def add_appt(self, postData):
+        print "Entering add_appt"
         error_list = []
         back_to_home_page = False
-        quote_text = postData['quote_text'].lower().strip()
-        quoted_by = postData['quoted_by']
+        date = postData['date'].encode()
+        print "date entered: ", date
+        time = postData['time'].encode()
+        print "time entered: ", time
         user_id = postData['user_id']
-        quote_list = Quote.objects.filter(quote_text=quote_text)
+        task = postData['task']
+        print "task entered: ", task
+        date_list = Appointment.objects.filter(date=date, time=time)
         user = User.objects.get(id=postData['user_id'])
+        todays_date = str(datetime.now(timezone('US/Pacific')).date())
+        print "todays_date",todays_date
+        time_now = str(datetime.now(timezone('US/Pacific')).time()).split(':')
+        seq = time_now[0], time_now[1]
+        time_now = ':'.join(seq)
+        print "time_now", time_now
 
-        if quote_list:
-            error_list.append('This quote message already exists!')
+        if date_list:
+            error_list.append('This date and time already has a task!')
             back_to_home_page = True
         else:
-            if len(quote_text) < 10:
-                error_list.append('Quote message cannot be less than 10 chars!')
+            if len(task) < 1:
+                error_list.append('Task explanation cannot be empty!')
                 back_to_home_page = True
-            if len(quoted_by) < 3:
-                error_list.append("'Quoted By' cannot be less than 3 chars!")
+            if date < todays_date:
+                print "Comparison date < todays_date is TRUE"
+                error_list.append("Date cannot be in the past!")
                 back_to_home_page = True
+            elif date == todays_date:
+                print "Comparison date == todays_date is TRUE"
+                if time < time_now:
+                    error_list.append("Time cannot be in the past!")
+                    back_to_home_page = True
 
         if back_to_home_page:
-            print "quote add failed: ", error_list
+            print "Add appointment failed: ", error_list
             ret_data = {
                 'success': False,
                 'msg_list': error_list
             }
         else:
-            # All validations passed. quote can be added into Quote DB
-            print "Creating quote object "
-            quote = Quote(quote_text=quote_text, poster_id=user_id, poster_alias=user.alias, quoted_by=quoted_by)
-            quote.save()
-            # quote.followers.add(user)
-            print "Saved quote = ", quote
+            # All validations passed. appointment can be added into Appointment DB
+            print "Creating appointment object "
+            appointment = Appointment(date=date,
+                                      time=time,
+                                      task=task,
+                                      status="Pending",
+                                      user=user)
+            appointment.save()
+            print "Saved appointment = ", appointment.task
             ret_data = {
                 'success': True,
                 'msg_list': []
             }
         return ret_data
 
-    def add_fav(self, postData):
-        quote = Quote.objects.get(id=postData['quote_id'])
-        user = User.objects.get(id=postData['user_id'])
-        quote.followers.add(user)
-        return user.quote_set.all()
+    def delete_appt(self, postData):
+        appointment = Appointment.objects.get(id=postData['appt_id']).delete()
 
-    def remove_from_my_list(self, postData):
-        quote = Quote.objects.get(id=postData['quote_id'])
-        user = User.objects.get(id=postData['user_id'])
-        user.quote_set.remove(quote)
-        return user.quote_set.all()
-    def get_poster_list(self, postData):
-        user = User.objects.get(id=postData['poster_id'])
-        return user.quote_set.all()
+    def update_appt(self, postData):
+        appointment = Appointment.objects.get(id=postData['appt_id'])
+        appointment.task = postData['new_task']
+        appointment.status = postData['new_status']
+        appointment.date = postData['new_date']
+        appointment.time = postData['new_time']
+        appointment.save()
 
 class User(models.Model):
-    first_name = models.CharField(max_length = 45)
-    alias = models.CharField(max_length = 45)
+    name = models.CharField(max_length = 45)
     email = models.CharField(max_length = 255)
     password = models.CharField(max_length = 255)
     created_at = models.DateTimeField(auto_now_add = True)
     updated_at = models.DateTimeField(auto_now = True)
     objects = UserManager()
 
-
-class Quote(models.Model):
-    quote_text = models.CharField(max_length=300)
-    poster_id = models.CharField(max_length=45)
-    poster_alias = models.CharField(max_length=45)
-    followers = models.ManyToManyField(User)
-    quoted_by = models.CharField(max_length=45)
-    objects = QuoteManager()
+class Appointment(models.Model):
+    name = models.CharField(max_length=45)
+    date = models.DateField(blank=True)
+    time = models.TimeField(blank=True)
+    task = models.CharField(max_length = 255, blank=True)
+    status = models.CharField(max_length=45)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    objects = AppointmentManager()

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>Update Appointment</title>
+    </head>
+    <style>
+        a{
+            display: inline-block;
+        }
+    </style>
+    <body>
+        <a href="/show_home">Dashboard</a>
+        <a href="/logout">Log Out</a>
+        <form action="/update_appt/{{appt_id}}" method="post">
+            {% csrf_token %}
+            <p>DEBUG >> {{appt_id}} - {{task}} - {{status}} - {{date}} - {{time}}</p>
+            Task: <input type="text" name="task" value={{task}}>
+            <select name="status">
+                {% if status == "Done" %}
+                    <option selected="selected">Done</option>
+                {% else %}
+                    <option>Done</option>
+                {% endif %}
+                {% if status == "Pending" %}
+                    <option selected="selected">Pending</option>
+                {% else %}
+                    <option>Pending</option>
+                {% endif %}
+                {% if status == "Missed" %}
+                    <option selected="selected">Missed</option>
+                {% else %}
+                    <option>Missed</option>
+                {% endif %}
+            </select>
+            Date: <input type="date" name="date" value={{date}}>
+            Time: <input type="time" name="time" value={{time}}>
+            <input type="submit" name="update" value="Update">
+        </form>
+    </body>
+</html>
